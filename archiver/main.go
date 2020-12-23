@@ -5,15 +5,49 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 const securityTestURLPath = "v1/phishing/security_tests"
 
+const EnvAPIBaseURL = "API_BASE_URL"
+const EnvAPIAuthToken = "API_AUTH_TOKEN"
+
+func getRequiredString(envKey string, configEntry *string) error {
+	if *configEntry != "" {
+		return nil
+	}
+
+	value := os.Getenv(envKey)
+	if value == "" {
+		return fmt.Errorf("required value missing for environment variable %s", envKey)
+	}
+	*configEntry = value
+
+	return nil
+}
+
 type LambdaConfig struct {
 	APIBaseURL string `json:"APIBaseURL"`
 	APIAuthToken string `json:"APIAuthToken"`
+}
+
+
+
+func (c *LambdaConfig) init() error {
+
+	if err := getRequiredString(EnvAPIBaseURL, &c.APIBaseURL); err != nil {
+		return err
+	}
+	if err := getRequiredString(EnvAPIAuthToken, &c.APIAuthToken); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type KnowBe4SecurityTest struct {
@@ -104,7 +138,14 @@ func getReport(config LambdaConfig) ([]KnowBe4SecurityTest, error) {
 }
 
 
-func main() {
-	fmt.Printf("Stub\n")
+func handler(config LambdaConfig) error {
+	if err := config.init(); err != nil {
+		return err
+	}
 
+	return fmt.Errorf("No Code to run")
+}
+
+func main() {
+	lambda.Start(handler)
 }
