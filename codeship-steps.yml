@@ -1,0 +1,9 @@
+- name: test
+  service: app
+  command: ./codeship/test.sh
+
+- name: deploy_prod
+  service: app
+  tag: main
+  command: ./codeship/deploy-prod.sh
+
