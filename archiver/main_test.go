@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,7 +82,9 @@ func TestGetReport(t *testing.T) {
 
 		w.WriteHeader(200)
 		w.Header().Set("content-type", "application/json")
-		_, _ = fmt.Fprintf(w, string(jsonBytes))
+
+		s, _ := strconv.Unquote(string(jsonBytes))
+		_, _ = fmt.Fprintf(w, s)
 	}
 
 	mux.HandleFunc("/" + securityTestURLPath, handler)
@@ -92,7 +95,7 @@ func TestGetReport(t *testing.T) {
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
-	gotData, got, err := getReport(LambdaConfig{APIBaseURL: server.URL})
+	gotData, got, err := getAllSecurityTests(LambdaConfig{APIBaseURL: server.URL})
 	assert.NoError(err)
 
 	assert.Equal(want, got, "bad struct results")
