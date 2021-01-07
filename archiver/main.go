@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -24,6 +25,7 @@ const (
 	EnvAPIBaseURL = "API_BASE_URL"
 	EnvAPIAuthToken = "API_AUTH_TOKEN"
 	EnvAWSS3Filename = "AWS_S3_FILENAME"
+	EnvAWSS3Bucket = "AWS_S3_BUCKET"
 )
 
 
@@ -73,11 +75,13 @@ type LambdaConfig struct {
 }
 
 func (c *LambdaConfig) init() error {
-
 	if err := getRequiredString(EnvAPIBaseURL, &c.APIBaseURL); err != nil {
 		return err
 	}
 	if err := getRequiredString(EnvAPIAuthToken, &c.APIAuthToken); err != nil {
+		return err
+	}
+	if err := getRequiredString(EnvAWSS3Bucket, &c.AWSS3Bucket); err != nil {
 		return err
 	}
 
@@ -211,15 +215,35 @@ func handler(config LambdaConfig) error {
 		return err
 	}
 
-	data, _, err := getAllSecurityTests(config)
+	_, results, err := getAllSecurityTests(config)
 	if err != nil {
 		return err
 	}
 
-	return saveToS3(data, config)
+	var cleanBytes []byte
+	if cleanBytes, err = json.Marshal(&results); err != nil {
+		err = errors.New( "error marshalling results for saving to S3 ... " + err.Error())
+		return err
+	}
+
+	return saveToS3(cleanBytes, config)
+}
+
+func manualRun() {
+	var config LambdaConfig
+	if err := config.init(); err != nil {
+		panic("error initializing config ... " + err.Error())
+	}
+
+	if err := handler(config); err != nil {
+		panic("error calling handler ... " + err.Error())
+	}
+
+	fmt.Printf("Success saving to s3\n")
 }
 
 func main() {
 	lambda.Start(handler)
+	//manualRun()
 }
 
