@@ -92,8 +92,9 @@ func TestGetReport(t *testing.T) {
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
-	got, err := getReport(LambdaConfig{APIBaseURL: server.URL})
+	gotData, got, err := getReport(LambdaConfig{APIBaseURL: server.URL})
 	assert.NoError(err)
 
-	assert.Equal(want, got, "bad results")
+	assert.Equal(want, got, "bad struct results")
+	assert.Contains(string(gotData), "campaign_id", "bad json results")
 }
