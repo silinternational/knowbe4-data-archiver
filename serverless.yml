@@ -1,0 +1,35 @@
+service: knowbe4-data-archiver
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: prod
+  timeout: 600
+  versionFunctions: false
+  memorySize: 512
+
+  s3:
+    dataBucket:
+      name: ${env:AWS_S3_BUCKET}
+      versioningConfiguration:
+        Status: Enabled
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  archiver:
+    environment:
+      API_BASE_URL: ${env:API_BASE_URL}
+      API_AUTH_TOKEN: ${env:API_AUTH_TOKEN}
+      AWS_S3_FILENAME: ${env:AWS_S3_FILENAME}
+      AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+    handler: bin/archiver
+    timeout: 600
+    events:
+       # cron(Minutes Hours Day-of-month Month Day-of-week Year)
+       # One of the day-of-month or day-of-week values must be a question mark (?)
+       - schedule: cron(10,40 * * * ? *)
