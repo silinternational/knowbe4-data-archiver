@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const exampleResult = `{
+const exampleSecurityTests = `{
     "campaign_id": 3423,
     "pst_id": 16142,
     "status": "Closed",
@@ -53,28 +53,50 @@ const exampleResult = `{
     "bounced_count": 0
   }`
 
-func TestStub(t *testing.T) {
-	assert := require.New(t)
-	var kb4Result KnowBe4SecurityTest
-	exBytes := []byte(exampleResult)
-	err := json.Unmarshal(exBytes, &kb4Result)
-	assert.NoError(err, "error unmarshalling results")
 
-	want := "abc"
-	got := "abc"
-	assert.Equal(want, got, "bad results")
-}
+const exampleRecipient = `{
+    "recipient_id": 3077742,
+    "pst_id": 14240,
+    "user": {
+      "id": 264215,
+      "active_directory_guid": null,
+      "first_name": "Bob",
+      "last_name": "Ross",
+      "email": "bob.r@kb4-demo.com"
+    },
+    "template": {
+      "id": 2,
+      "name": "Your Amazon Order"
+    },
+    "scheduled_at": "2019-04-02T15:02:38.000Z",
+    "delivered_at": "2019-04-02T15:02:38.000Z",
+    "opened_at": "2019-04-02T15:02:38.000Z",
+    "clicked_at": "2019-04-02T15:02:38.000Z",
+    "replied_at": "2019-04-02T15:02:38.000Z",
+    "attachment_opened_at": null,
+    "macro_enabled_at": null,
+    "data_entered_at": "2019-04-02T15:02:38.000Z",
+    "vulnerable-plugins_at": null,
+    "exploited_at": null,
+    "reported_at": null,
+    "bounced_at": null,
+    "ip": "XX.XX.XXX.XXX",
+    "ip_location": "St.Petersburg, FL",
+    "browser": "Chrome",
+    "browser_version": "48.0",
+    "os": "MacOSX"
+  }`
 
 
-func TestGetReport(t *testing.T) {
+func TestGetAllSecurityTests(t *testing.T) {
 	assert := require.New(t)
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
 
-	resultsString := "[" + exampleResult + "]"
+	apiJSON := "[" + exampleSecurityTests + "]"
 
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		jsonBytes, err := json.Marshal(resultsString)
+		jsonBytes, err := json.Marshal(apiJSON)
 		if err != nil {
 			t.Errorf("Unable to marshal fixture results, error: %s", err.Error())
 			t.FailNow()
@@ -91,7 +113,7 @@ func TestGetReport(t *testing.T) {
 
 	var want []KnowBe4SecurityTest
 
-	exBytes := []byte(resultsString)
+	exBytes := []byte(apiJSON)
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
@@ -100,4 +122,43 @@ func TestGetReport(t *testing.T) {
 
 	assert.Equal(want, got, "bad struct results")
 	assert.Contains(string(gotData), "campaign_id", "bad json results")
+}
+
+
+func TestGetAllRecipientsForSecurityTest(t *testing.T) {
+	assert := require.New(t)
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+
+	apiJSON := "[" + exampleRecipient + "]"
+
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		jsonBytes, err := json.Marshal(apiJSON)
+		if err != nil {
+			t.Errorf("Unable to marshal fixture results, error: %s", err.Error())
+			t.FailNow()
+		}
+
+		w.WriteHeader(200)
+		w.Header().Set("content-type", "application/json")
+
+		s, _ := strconv.Unquote(string(jsonBytes))
+		_, _ = fmt.Fprintf(w, s)
+	}
+
+	secTestID := 111
+	url := fmt.Sprintf(recipientsURLPath, secTestID)
+	mux.HandleFunc("/" + url, handler)
+
+	var want []KnowBe4Recipient
+
+	exBytes := []byte(apiJSON)
+	err := json.Unmarshal(exBytes, &want)
+	assert.NoError(err, "error unmarshalling fixtures")
+
+	gotData, got, err := getAllRecipientsForSecurityTest(secTestID, LambdaConfig{APIBaseURL: server.URL})
+	assert.NoError(err)
+
+	assert.Equal(want, got, "bad struct results")
+	assert.Contains(string(gotData), "recipient_id", "bad json results")
 }

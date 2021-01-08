@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -19,7 +19,9 @@ import (
 
 const countPerPage = 500
 const securityTestURLPath = "v1/phishing/security_tests"
-const s3DefaultFilename = "knowbe4_data"
+const recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
+const s3DefaultFilename = "knowbe4_security_tests"
+const s3RecipientsFilenamePrefix = "knowbe4_recipients_"
 
 const (
 	EnvAPIBaseURL = "API_BASE_URL"
@@ -28,6 +30,38 @@ const (
 	EnvAWSS3Bucket = "AWS_S3_BUCKET"
 )
 
+type KnowBe4Recipient struct {
+	RecipientID int `json:"recipient_id"`
+	PstID       int `json:"pst_id"`
+	User        struct {
+		ID                  int         `json:"id"`
+		ActiveDirectoryGUID *string `json:"active_directory_guid"`
+		FirstName           string      `json:"first_name"`
+		LastName            string      `json:"last_name"`
+		Email               string      `json:"email"`
+	} `json:"user"`
+	Template struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	} `json:"template"`
+	ScheduledAt         time.Time   `json:"scheduled_at"`
+	DeliveredAt         time.Time   `json:"delivered_at"`
+	OpenedAt            time.Time   `json:"opened_at"`
+	ClickedAt           time.Time   `json:"clicked_at"`
+	RepliedAt           *time.Time `json:"replied_at"`
+	AttachmentOpenedAt  *time.Time `json:"attachment_opened_at"`
+	MacroEnabledAt      *time.Time `json:"macro_enabled_at"`
+	DataEnteredAt       time.Time   `json:"data_entered_at"`
+	VulnerablePluginsAt *time.Time `json:"vulnerable-plugins_at"`
+	ExploitedAt         *time.Time `json:"exploited_at"`
+	ReportedAt          *time.Time `json:"reported_at"`
+	BouncedAt           *time.Time `json:"bounced_at"`
+	IP                  string      `json:"ip"`
+	IPLocation          string      `json:"ip_location"`
+	Browser             string      `json:"browser"`
+	BrowserVersion      string      `json:"browser_version"`
+	Os                  string      `json:"os"`
+}
 
 type KnowBe4SecurityTest struct {
 	CampaignID int    `json:"campaign_id"`
@@ -72,6 +106,7 @@ type LambdaConfig struct {
 	APIAuthToken string `json:"APIAuthToken"`
 	AWSS3Bucket string `json:"AWSS3Bucket"`
 	AWSS3Filename string `json:"AWSS3FileName"`
+	MaxFileCount int `json:"MaxFileCount"`
 }
 
 func (c *LambdaConfig) init() error {
@@ -194,17 +229,99 @@ func getAllSecurityTests(config LambdaConfig) ([]byte, []KnowBe4SecurityTest, er
 	return allData, allTests, nil
 }
 
-func saveToS3(data []byte, config LambdaConfig) error {
+
+func getRecipientsPage(pstID, pageNum int, config LambdaConfig) ([]byte, []KnowBe4Recipient, error) {
+	queryParams := map[string]string{
+		"per_page": strconv.Itoa(countPerPage),
+		"page": strconv.Itoa(pageNum),
+	}
+
+	url := fmt.Sprintf(recipientsURLPath, pstID)
+
+	// Make http call
+	resp, err := callAPI(url, config, queryParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	var pageRecipients []KnowBe4Recipient
+
+	if err := json.Unmarshal(bodyBytes, &pageRecipients); err != nil {
+		return nil, nil, fmt.Errorf("error decoding response json for recipients for security test %v: %s", pstID, err)
+	}
+
+	return bodyBytes, pageRecipients, nil
+}
+
+func getAllRecipientsForSecurityTest(secTestID int, config LambdaConfig) ([]byte, []KnowBe4Recipient, error) {
+	var allData []byte
+	var allRecipients []KnowBe4Recipient
+
+	for i := 1;; i++ {
+		data, nextTests, err := getRecipientsPage(secTestID, i, config)
+		if err != nil {
+			err = fmt.Errorf("error fetching recipients for security test %v page %v ... %s",
+				secTestID, i, err)
+			return nil, nil, err
+		}
+
+		allData = append(allData, data...)
+		allRecipients = append(allRecipients, nextTests...)
+
+		if len(nextTests) < countPerPage {
+			break
+		}
+	}
+
+	return allData, allRecipients, nil
+}
+
+
+
+func logRecipientResults(count int, err error) error {
+	log.Printf("Successfully saved %v recipient files to S3", count)
+	return err
+}
+
+func saveRecipientsToS3(config LambdaConfig, secTests []KnowBe4SecurityTest) error {
+	for i, st := range secTests {
+		_, recipients, err := getAllRecipientsForSecurityTest(st.PstID, config)
+		if err != nil {
+			err = fmt.Errorf("error gettings reciptients from api for security test %v ... %s", st.PstID, err)
+			return logRecipientResults(i, err)
+		}
+
+		var cleanBytes []byte
+		if cleanBytes, err = json.Marshal(&recipients); err != nil {
+			err = fmt.Errorf( "error marshalling recipients results for security test %v for saving to S3 ... %s", st.PstID, err)
+			return logRecipientResults(i, err)
+		}
+
+		filename := fmt.Sprintf("%s%v", s3RecipientsFilenamePrefix,st.PstID)
+
+		if err := saveToS3(cleanBytes, config.AWSS3Bucket, filename); err != nil {
+			err = fmt.Errorf( "error saving recipients to S3 for security test %v ... %s", st.PstID, err)
+			return logRecipientResults(i,  err)
+		}
+	}
+
+	return logRecipientResults(len(secTests), nil)
+}
+
+func saveToS3(data []byte, bucketName, fileName string) error {
 	sess := session.Must(session.NewSession())
 	uploader := s3manager.NewUploader(sess)
 	_, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(config.AWSS3Bucket),
-		Key:    aws.String(config.AWSS3Filename),
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(fileName),
 		Body:   bytes.NewReader(data),
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error saving data to %s/%s ... %s", config.AWSS3Bucket, config.AWSS3Filename, err)
+		return fmt.Errorf("Error saving data to %s/%s ... %s", bucketName, fileName, err)
 	}
 
 	return nil
@@ -215,18 +332,29 @@ func handler(config LambdaConfig) error {
 		return err
 	}
 
-	_, results, err := getAllSecurityTests(config)
+	_, stResults, err := getAllSecurityTests(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("error gettings security tests from api ... %s",  err)
 	}
 
 	var cleanBytes []byte
-	if cleanBytes, err = json.Marshal(&results); err != nil {
-		err = errors.New( "error marshalling results for saving to S3 ... " + err.Error())
+	if cleanBytes, err = json.Marshal(&stResults); err != nil {
+		err = errors.New( "error marshalling security tests results for saving to S3 ... " + err.Error())
 		return err
 	}
 
-	return saveToS3(cleanBytes, config)
+	if err := saveToS3(cleanBytes, config.AWSS3Bucket, config.AWSS3Filename); err != nil {
+		err = errors.New( "error saving security test results to S3 ... " + err.Error())
+		return err
+	}
+
+	log.Printf("Success saving %v security tests to S3.", len(stResults))
+
+	count := config.MaxFileCount
+	if count == 0 {
+		count = len(stResults)
+	}
+	return saveRecipientsToS3(config, stResults[:count])
 }
 
 func manualRun() {
@@ -234,6 +362,8 @@ func manualRun() {
 	if err := config.init(); err != nil {
 		panic("error initializing config ... " + err.Error())
 	}
+
+	config.MaxFileCount = 3
 
 	if err := handler(config); err != nil {
 		panic("error calling handler ... " + err.Error())
@@ -243,7 +373,7 @@ func manualRun() {
 }
 
 func main() {
-	lambda.Start(handler)
-	//manualRun()
+	//lambda.Start(handler)
+	manualRun()
 }
 
