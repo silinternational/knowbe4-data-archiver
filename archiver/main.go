@@ -10,14 +10,17 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const countPerPage = 500
+const maxErrorsAllowed = 5
 const securityTestURLPath = "v1/phishing/security_tests"
 const recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
 const s3DefaultFilename = "knowbe4_security_tests"
@@ -311,6 +314,83 @@ func saveRecipientsToS3(config LambdaConfig, secTests []KnowBe4SecurityTest) err
 	return logRecipientResults(len(secTests), nil)
 }
 
+func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitGroup, c chan error)  {
+
+	defer wg.Done()
+
+	_, recipients, err := getAllRecipientsForSecurityTest(secTestID, config)
+	if err != nil {
+		err = fmt.Errorf("error gettings reciptients from api for security test %v ... %s", secTestID, err)
+		c <-err
+		return
+	}
+
+	var cleanBytes []byte
+	if cleanBytes, err = json.Marshal(&recipients); err != nil {
+		err = fmt.Errorf( "error marshalling recipients results for security test %v for saving to S3 ... %s", secTestID, err)
+		c <-err
+		return
+	}
+
+	filename := fmt.Sprintf("%s%v", s3RecipientsFilenamePrefix, secTestID)
+
+	if err := saveToS3(cleanBytes, config.AWSS3Bucket, filename); err != nil {
+		err = fmt.Errorf( "error saving recipients to S3 for security test %v ... %s", secTestID, err)
+		c <-err
+		return
+	}
+
+	c <-nil
+	return
+}
+
+
+func saveRecipientsToS3Async(config LambdaConfig, secTests []KnowBe4SecurityTest) error {
+	c := make(chan error) // Declare a unbuffered channel
+	var lastErr error
+
+	errCount := 0
+	stIndex := -1
+	stCount := len(secTests)
+	workingGroupCount := 5
+
+	allDone := false
+
+	for {
+		var wg sync.WaitGroup
+
+		for i := 0; i < workingGroupCount; i++ {
+			stIndex += 1
+			if stIndex >= stCount {
+				allDone = true
+				break
+			}
+			nextID := secTests[stIndex].PstID
+			wg.Add(1)
+			go saveRecipientsForSecTest(nextID, config, &wg, c)
+
+			newErr := <-c
+			if newErr != nil {
+				log.Print(newErr.Error())
+				errCount += 1
+			}
+		}
+
+		wg.Wait()
+
+		if errCount >= maxErrorsAllowed {
+			lastErr = fmt.Errorf("aborting due to getting too many (%v) errors", errCount)
+		}
+
+		if allDone {
+			break
+		}
+	}
+
+	close(c)
+	return lastErr
+}
+
 func saveToS3(data []byte, bucketName, fileName string) error {
 	sess := session.Must(session.NewSession())
 	uploader := s3manager.NewUploader(sess)
@@ -354,7 +434,7 @@ func handler(config LambdaConfig) error {
 	if count == 0 {
 		count = len(stResults)
 	}
-	return saveRecipientsToS3(config, stResults[:count])
+	return saveRecipientsToS3Async(config, stResults[:count])
 }
 
 func manualRun() {
@@ -363,7 +443,7 @@ func manualRun() {
 		panic("error initializing config ... " + err.Error())
 	}
 
-	config.MaxFileCount = 3
+	config.MaxFileCount = 2
 
 	if err := handler(config); err != nil {
 		panic("error calling handler ... " + err.Error())
@@ -373,7 +453,7 @@ func manualRun() {
 }
 
 func main() {
-	//lambda.Start(handler)
-	manualRun()
+	lambda.Start(handler)
+	//manualRun()
 }
 
