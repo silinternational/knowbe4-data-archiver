@@ -25,6 +25,12 @@ provider:
       name: ${env:AWS_S3_BUCKET}
       versioningConfiguration:
         Status: Enabled
+      lifecycleConfiguration:
+        rules:
+          - Id: ExpirationRule
+            Prefix: ''
+            Status: Enabled
+            ExpirationInDays: 15
 
   # you can define service wide environment variables here
   environment:
