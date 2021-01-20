@@ -9,11 +9,28 @@ provider:
   memorySize: 512
   region: us-east-1
 
+  iamRoleStatements: # IAM role statements so that services can be accessed in the AWS account
+    - Effect: 'Allow'
+      Action:
+        - 's3:PutObject'
+      Resource:
+        Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - ${env:AWS_S3_BUCKET}
+              - '/*'
+
   s3:
     dataBucket:
       name: ${env:AWS_S3_BUCKET}
       versioningConfiguration:
         Status: Enabled
+      lifecycleConfiguration:
+        rules:
+          - Id: ExpirationRule
+            Prefix: ''
+            Status: Enabled
+            ExpirationInDays: 15
 
   # you can define service wide environment variables here
   environment:
