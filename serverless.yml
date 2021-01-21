@@ -1,0 +1,64 @@
+service: knowbe4-data-archiver
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: prod
+  timeout: 600
+  versionFunctions: false
+  memorySize: 512
+  region: us-east-1
+
+  iamRoleStatements: # IAM role statements so that services can be accessed in the AWS account
+    - Effect: 'Allow'
+      Action:
+        - 's3:PutObject'
+      Resource:
+        Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - ${env:AWS_S3_BUCKET}
+              - '/*'
+
+  s3:
+    dataBucket:
+      name: ${env:AWS_S3_BUCKET}
+      versioningConfiguration:
+        Status: Enabled
+      lifecycleConfiguration:
+        rules:
+          - Id: ExpirationRule
+            Prefix: ''
+            Status: Enabled
+            ExpirationInDays: 15
+
+  # you can define service wide environment variables here
+  environment:
+    stage: ${self:custom.stage}
+    region: ${self:custom.region}
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+
+
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  archiver:
+    environment:
+      API_BASE_URL: ${env:API_BASE_URL}
+      API_AUTH_TOKEN: ${env:API_AUTH_TOKEN}
+      AWS_S3_FILENAME: ${env:AWS_S3_FILENAME}
+      AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+    handler: bin/archiver
+    timeout: 600
+    events:
+       # cron(Minutes Hours Day-of-month Month Day-of-week Year)
+       # One of the day-of-month or day-of-week values must be a question mark (?)
+       - schedule: cron(10 6 * * ? *)

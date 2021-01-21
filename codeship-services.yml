@@ -1,0 +1,6 @@
+app:
+  build:
+    dockerfile_path: Dockerfile
+  encrypted_env_file: aws.env.encrypted
+  cached: true
+  working_dir: /app
