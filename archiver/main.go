@@ -23,7 +23,7 @@ const countPerPage = 500
 const maxErrorsAllowed = 5
 const securityTestURLPath = "v1/phishing/security_tests"
 const recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
-const s3DefaultFilename = "knowbe4_security_tests"
+const s3DefaultFilename = "knowbe4_security_tests.json"
 const s3RecipientsFilenamePrefix = "knowbe4_recipients_"
 
 const (
@@ -303,7 +303,7 @@ func saveRecipientsToS3(config LambdaConfig, secTests []KnowBe4SecurityTest) err
 			return logRecipientResults(i, err)
 		}
 
-		filename := fmt.Sprintf("%s%v", s3RecipientsFilenamePrefix,st.PstID)
+		filename := fmt.Sprintf("%s%v.json", s3RecipientsFilenamePrefix,st.PstID)
 
 		if err := saveToS3(cleanBytes, config.AWSS3Bucket, filename); err != nil {
 			err = fmt.Errorf( "error saving recipients to S3 for security test %v ... %s", st.PstID, err)
@@ -332,7 +332,7 @@ func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitG
 		return
 	}
 
-	filename := fmt.Sprintf("%s%v", s3RecipientsFilenamePrefix, secTestID)
+	filename := fmt.Sprintf("%s%v.json", s3RecipientsFilenamePrefix, secTestID)
 
 	if err := saveToS3(cleanBytes, config.AWSS3Bucket, filename); err != nil {
 		err = fmt.Errorf( "error saving recipients to S3 for security test %v ... %s", secTestID, err)
