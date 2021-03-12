@@ -8,7 +8,7 @@ provider:
   versionFunctions: false
   memorySize: 512
   region: us-east-1
-
+  logRetentionInDays: 14
   iamRoleStatements: # IAM role statements so that services can be accessed in the AWS account
     - Effect: 'Allow'
       Action:
