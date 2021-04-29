@@ -20,6 +20,10 @@ const exampleSecurityTest = `{
       {
         "group_id": 16342,
         "name": "Corporate Employees"
+      },
+      {
+        "group_id": 16343,
+        "name": "Volunteers"
       }
     ],
     "phish_prone_percentage": 0.5,
@@ -29,6 +33,10 @@ const exampleSecurityTest = `{
       {
         "category_id": 4237,
         "name": "Current Events"
+      },
+      {
+        "category_id": 4238,
+        "name": "Other"
       }
     ],
     "template": {
@@ -58,11 +66,11 @@ const exampleFlatSecurityTest = `{
     "pst_id": 16142,
     "status": "Closed",
     "name": "Corporate Test",
-    "all_groups": "Corporate Employees",
+    "all_groups": "Corporate Employees,Volunteers",
     "phish_prone_percentage": 0.5,
     "started_at": "2019-04-02T15:02:38.000Z",
     "duration": 1,
-    "all_categories": "Current Events",
+    "all_categories": "Current Events,Other",
     "template_id": 11428,
     "template_name": "CNN Breaking News",
     "landing_page_id": 1842,

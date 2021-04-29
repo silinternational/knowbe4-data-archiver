@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -517,22 +518,22 @@ func flattenGroups(groups []struct {
 	GroupID int    `json:"group_id"`
 	Name    string `json:"name"`
 }) string {
-	flatGroups := ""
+	groupNames := make([]string, len(groups))
 	for i := range groups {
-		flatGroups += groups[i].Name
+		groupNames[i] = groups[i].Name
 	}
-	return flatGroups
+	return strings.Join(groupNames, ",")
 }
 
 func flattenCategories(categories []struct {
 	CategoryID int    `json:"category_id"`
 	Name       string `json:"name"`
 }) string {
-	flatCategories := ""
+	categoryNames := make([]string, len(categories))
 	for i := range categories {
-		flatCategories += categories[i].Name
+		categoryNames[i] = categories[i].Name
 	}
-	return flatCategories
+	return strings.Join(categoryNames, ",")
 }
 
 func flattenRecipients(recipients []KnowBe4Recipient) ([]KnowBe4FlatRecipient, error) {
