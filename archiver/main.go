@@ -50,14 +50,14 @@ type KnowBe4Recipient struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"template"`
-	ScheduledAt         time.Time  `json:"scheduled_at"`
-	DeliveredAt         time.Time  `json:"delivered_at"`
-	OpenedAt            time.Time  `json:"opened_at"`
-	ClickedAt           time.Time  `json:"clicked_at"`
+	ScheduledAt         *time.Time `json:"scheduled_at"`
+	DeliveredAt         *time.Time `json:"delivered_at"`
+	OpenedAt            *time.Time `json:"opened_at"`
+	ClickedAt           *time.Time `json:"clicked_at"`
 	RepliedAt           *time.Time `json:"replied_at"`
 	AttachmentOpenedAt  *time.Time `json:"attachment_opened_at"`
 	MacroEnabledAt      *time.Time `json:"macro_enabled_at"`
-	DataEnteredAt       time.Time  `json:"data_entered_at"`
+	DataEnteredAt       *time.Time `json:"data_entered_at"`
 	VulnerablePluginsAt *time.Time `json:"vulnerable-plugins_at"`
 	ExploitedAt         *time.Time `json:"exploited_at"`
 	ReportedAt          *time.Time `json:"reported_at"`
@@ -79,14 +79,14 @@ type KnowBe4FlatRecipient struct {
 	UserEmail               string     `json:"user_email"`
 	TemplateID              int        `json:"template_id"`
 	TemplateName            string     `json:"template_name"`
-	ScheduledAt             time.Time  `json:"scheduled_at"`
-	DeliveredAt             time.Time  `json:"delivered_at"`
-	OpenedAt                time.Time  `json:"opened_at"`
-	ClickedAt               time.Time  `json:"clicked_at"`
+	ScheduledAt             *time.Time `json:"scheduled_at"`
+	DeliveredAt             *time.Time `json:"delivered_at"`
+	OpenedAt                *time.Time `json:"opened_at"`
+	ClickedAt               *time.Time `json:"clicked_at"`
 	RepliedAt               *time.Time `json:"replied_at"`
 	AttachmentOpenedAt      *time.Time `json:"attachment_opened_at"`
 	MacroEnabledAt          *time.Time `json:"macro_enabled_at"`
-	DataEnteredAt           time.Time  `json:"data_entered_at"`
+	DataEnteredAt           *time.Time `json:"data_entered_at"`
 	VulnerablePluginsAt     *time.Time `json:"vulnerable-plugins_at"`
 	ExploitedAt             *time.Time `json:"exploited_at"`
 	ReportedAt              *time.Time `json:"reported_at"`
