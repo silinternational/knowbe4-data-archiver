@@ -12,157 +12,37 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const (
-	countPerPage               = 500
-	maxErrorsAllowed           = 5
-	securityTestURLPath        = "v1/phishing/security_tests"
-	recipientsURLPath          = "v1/phishing/security_tests/%v/recipients"
-	s3DefaultFilename          = "knowbe4_security_tests.json"
-	s3RecipientsFilenamePrefix = "knowbe4_recipients_"
+	countPerPage     = 500
+	maxErrorsAllowed = 5
+
+	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests~1{pst_id}~1recipients/get
+	recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
+
+	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests/get
+	securityTestURLPath = "v1/phishing/security_tests"
+
+	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1campaigns/get
+	campaignsURLPath = "v1/phishing/campaigns"
 )
 
 const (
-	EnvAPIBaseURL    = "API_BASE_URL"
-	EnvAPIAuthToken  = "API_AUTH_TOKEN"
-	EnvAWSS3Filename = "AWS_S3_FILENAME"
-	EnvAWSS3Bucket   = "AWS_S3_BUCKET"
+	s3RecipientsFilenamePrefix = "knowbe4_recipients_"
+	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
+	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
 )
 
-type KnowBe4Recipient struct {
-	RecipientID int `json:"recipient_id"`
-	PstID       int `json:"pst_id"`
-	User        struct {
-		ID                  int     `json:"id"`
-		ActiveDirectoryGUID *string `json:"active_directory_guid"`
-		FirstName           string  `json:"first_name"`
-		LastName            string  `json:"last_name"`
-		Email               string  `json:"email"`
-	} `json:"user"`
-	Template struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-	} `json:"template"`
-	ScheduledAt         *time.Time `json:"scheduled_at"`
-	DeliveredAt         *time.Time `json:"delivered_at"`
-	OpenedAt            *time.Time `json:"opened_at"`
-	ClickedAt           *time.Time `json:"clicked_at"`
-	RepliedAt           *time.Time `json:"replied_at"`
-	AttachmentOpenedAt  *time.Time `json:"attachment_opened_at"`
-	MacroEnabledAt      *time.Time `json:"macro_enabled_at"`
-	DataEnteredAt       *time.Time `json:"data_entered_at"`
-	VulnerablePluginsAt *time.Time `json:"vulnerable-plugins_at"`
-	ExploitedAt         *time.Time `json:"exploited_at"`
-	ReportedAt          *time.Time `json:"reported_at"`
-	BouncedAt           *time.Time `json:"bounced_at"`
-	IP                  string     `json:"ip"`
-	IPLocation          string     `json:"ip_location"`
-	Browser             string     `json:"browser"`
-	BrowserVersion      string     `json:"browser_version"`
-	Os                  string     `json:"os"`
-}
-
-type KnowBe4FlatRecipient struct {
-	RecipientID             int        `json:"recipient_id"`
-	PstID                   int        `json:"pst_id"`
-	UserID                  int        `json:"user_id"`
-	UserActiveDirectoryGUID *string    `json:"user_active_directory_guid"`
-	UserFirstName           string     `json:"user_first_name"`
-	UserLastName            string     `json:"user_last_name"`
-	UserEmail               string     `json:"user_email"`
-	TemplateID              int        `json:"template_id"`
-	TemplateName            string     `json:"template_name"`
-	ScheduledAt             *time.Time `json:"scheduled_at"`
-	DeliveredAt             *time.Time `json:"delivered_at"`
-	OpenedAt                *time.Time `json:"opened_at"`
-	ClickedAt               *time.Time `json:"clicked_at"`
-	RepliedAt               *time.Time `json:"replied_at"`
-	AttachmentOpenedAt      *time.Time `json:"attachment_opened_at"`
-	MacroEnabledAt          *time.Time `json:"macro_enabled_at"`
-	DataEnteredAt           *time.Time `json:"data_entered_at"`
-	VulnerablePluginsAt     *time.Time `json:"vulnerable-plugins_at"`
-	ExploitedAt             *time.Time `json:"exploited_at"`
-	ReportedAt              *time.Time `json:"reported_at"`
-	BouncedAt               *time.Time `json:"bounced_at"`
-	IP                      string     `json:"ip"`
-	IPLocation              string     `json:"ip_location"`
-	Browser                 string     `json:"browser"`
-	BrowserVersion          string     `json:"browser_version"`
-	Os                      string     `json:"os"`
-}
-
-type KnowBe4SecurityTest struct {
-	CampaignID int    `json:"campaign_id"`
-	PstID      int    `json:"pst_id"`
-	Status     string `json:"status"`
-	Name       string `json:"name"`
-	Groups     []struct {
-		GroupID int    `json:"group_id"`
-		Name    string `json:"name"`
-	} `json:"groups"`
-	PhishPronePercentage float64   `json:"phish_prone_percentage"`
-	StartedAt            time.Time `json:"started_at"`
-	Duration             int       `json:"duration"`
-	Categories           []struct {
-		CategoryID int    `json:"category_id"`
-		Name       string `json:"name"`
-	} `json:"categories"`
-	Template struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-	} `json:"template"`
-	LandingPage struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-	} `json:"landing-page"`
-	ScheduledCount        int `json:"scheduled_count"`
-	DeliveredCount        int `json:"delivered_count"`
-	OpenedCount           int `json:"opened_count"`
-	ClickedCount          int `json:"clicked_count"`
-	RepliedCount          int `json:"replied_count"`
-	AttachmentOpenCount   int `json:"attachment_open_count"`
-	MacroEnabledCount     int `json:"macro_enabled_count"`
-	DataEnteredCount      int `json:"data_entered_count"`
-	VulnerablePluginCount int `json:"vulnerable_plugin_count"`
-	ExploitedCount        int `json:"exploited_count"`
-	ReportedCount         int `json:"reported_count"`
-	BouncedCount          int `json:"bounced_count"`
-}
-
-type KnowBe4FlatSecurityTest struct {
-	CampaignID            int       `json:"campaign_id"`
-	PstID                 int       `json:"pst_id"`
-	Status                string    `json:"status"`
-	Name                  string    `json:"name"`
-	Groups                string    `json:"all_groups"`
-	PhishPronePercentage  float64   `json:"phish_prone_percentage"`
-	StartedAt             time.Time `json:"started_at"`
-	Duration              int       `json:"duration"`
-	Categories            string    `json:"all_categories"`
-	TemplateID            int       `json:"template_id"`
-	TemplateName          string    `json:"template_name"`
-	LandingPageID         int       `json:"landing_page_id"`
-	LandingPageName       string    `json:"landing_page_name"`
-	ScheduledCount        int       `json:"scheduled_count"`
-	DeliveredCount        int       `json:"delivered_count"`
-	OpenedCount           int       `json:"opened_count"`
-	ClickedCount          int       `json:"clicked_count"`
-	RepliedCount          int       `json:"replied_count"`
-	AttachmentOpenCount   int       `json:"attachment_open_count"`
-	MacroEnabledCount     int       `json:"macro_enabled_count"`
-	DataEnteredCount      int       `json:"data_entered_count"`
-	VulnerablePluginCount int       `json:"vulnerable_plugin_count"`
-	ExploitedCount        int       `json:"exploited_count"`
-	ReportedCount         int       `json:"reported_count"`
-	BouncedCount          int       `json:"bounced_count"`
-}
+const (
+	EnvAPIBaseURL   = "API_BASE_URL"
+	EnvAPIAuthToken = "API_AUTH_TOKEN"
+	EnvAWSS3Bucket  = "AWS_S3_BUCKET"
+)
 
 type LambdaConfig struct {
 	APIBaseURL    string `json:"APIBaseURL"`
@@ -181,14 +61,6 @@ func (c *LambdaConfig) init() error {
 	}
 	if err := getRequiredString(EnvAWSS3Bucket, &c.AWSS3Bucket); err != nil {
 		return err
-	}
-
-	if c.AWSS3Filename == "" {
-		filename := os.Getenv(EnvAWSS3Filename)
-		if filename == "" {
-			filename = s3DefaultFilename
-		}
-		c.AWSS3Filename = filename
 	}
 
 	return nil
@@ -346,6 +218,52 @@ func getAllRecipientsForSecurityTest(secTestID int, config LambdaConfig) ([]byte
 	return allData, allRecipients, nil
 }
 
+func getCampaignsPage(pageNum int, config LambdaConfig) ([]KnowBe4Campaign, error) {
+	queryParams := map[string]string{
+		"per_page": strconv.Itoa(countPerPage),
+		"page":     strconv.Itoa(pageNum),
+	}
+
+	// Make http call
+	resp, err := callAPI(campaignsURLPath, config, queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	var campaigns []KnowBe4Campaign
+
+	if err := json.Unmarshal(bodyBytes, &campaigns); err != nil {
+		return nil, fmt.Errorf("error decoding response json for campaigns: %s", err)
+	}
+
+	return campaigns, nil
+}
+
+func getAllCampaigns(config LambdaConfig) ([]KnowBe4FlatCampaign, error) {
+	var allCampaigns []KnowBe4Campaign
+
+	for i := 1; ; i++ {
+		c, err := getCampaignsPage(i, config)
+		if err != nil {
+			err = fmt.Errorf("error fetching page %v ... %s", i, err)
+			return nil, err
+		}
+
+		allCampaigns = append(allCampaigns, c...)
+
+		if len(c) < countPerPage {
+			break
+		}
+	}
+
+	flatResults, err := flattenCampaigns(allCampaigns)
+
+	return flatResults, err
+}
+
 func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitGroup, c chan error) {
 	defer wg.Done()
 
@@ -356,16 +274,9 @@ func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitG
 		return
 	}
 
-	var cleanBytes []byte
-	if cleanBytes, err = json.Marshal(&recipients); err != nil {
-		err = fmt.Errorf("error marshalling recipients results for security test %v for saving to S3 ... %s", secTestID, err)
-		c <- err
-		return
-	}
-
 	filename := fmt.Sprintf("%s%v.json", s3RecipientsFilenamePrefix, secTestID)
 
-	if err := saveToS3(cleanBytes, config.AWSS3Bucket, filename); err != nil {
+	if err := saveToS3(&recipients, config.AWSS3Bucket, filename); err != nil {
 		err = fmt.Errorf("error saving recipients to S3 for security test %v ... %s", secTestID, err)
 		c <- err
 		return
@@ -421,13 +332,18 @@ func saveRecipientsToS3Async(config LambdaConfig, secTests []KnowBe4FlatSecurity
 	return lastErr
 }
 
-func saveToS3(data []byte, bucketName, fileName string) error {
+func saveToS3(data interface{}, bucketName, fileName string) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return errors.New("error marshalling security tests results for saving to S3 ..." + err.Error())
+	}
+
 	sess := session.Must(session.NewSession())
 	uploader := s3manager.NewUploader(sess)
-	_, err := uploader.Upload(&s3manager.UploadInput{
+	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(fileName),
-		Body:   bytes.NewReader(data),
+		Body:   bytes.NewReader(b),
 	})
 	if err != nil {
 		return fmt.Errorf("Error saving data to %s/%s ... %s", bucketName, fileName, err)
@@ -441,29 +357,44 @@ func handler(config LambdaConfig) error {
 		return err
 	}
 
+	if err := getAndSaveCampaigns(config); err != nil {
+		return errors.New("error saving campaigns ... " + err.Error())
+	}
+
 	_, stResults, err := getAllSecurityTests(config)
 	if err != nil {
-		return fmt.Errorf("error gettings security tests from api ... %s", err)
+		return errors.New("error getting security tests from api ..." + err.Error())
 	}
 
-	var cleanBytes []byte
-	if cleanBytes, err = json.Marshal(&stResults); err != nil {
-		err = errors.New("error marshalling security tests results for saving to S3 ... " + err.Error())
+	if err := saveTestsToS3(config, stResults); err != nil {
 		return err
 	}
-
-	if err := saveToS3(cleanBytes, config.AWSS3Bucket, config.AWSS3Filename); err != nil {
-		err = errors.New("error saving security test results to S3 ... " + err.Error())
-		return err
-	}
-
-	log.Printf("Success saving %v security tests to S3.", len(stResults))
 
 	count := config.MaxFileCount
 	if count == 0 {
 		count = len(stResults)
 	}
 	return saveRecipientsToS3Async(config, stResults[:count])
+}
+
+func saveTestsToS3(config LambdaConfig, stResults []KnowBe4FlatSecurityTest) error {
+	if err := saveToS3(&stResults, config.AWSS3Bucket, phishingTestsFilename); err != nil {
+		return errors.New("error saving security test results to S3 ..." + err.Error())
+	}
+
+	log.Printf("Success saving %v security tests to S3.", len(stResults))
+	return nil
+}
+
+func getAndSaveCampaigns(config LambdaConfig) error {
+	campaigns, err := getAllCampaigns(config)
+	if err != nil {
+		return errors.New("error getting campaigns from KnowBe4 ..." + err.Error())
+	}
+	if err := saveToS3(&campaigns, config.AWSS3Bucket, campaignsFilename); err != nil {
+		return errors.New("error saving campaigns to S3 ..." + err.Error())
+	}
+	return nil
 }
 
 func manualRun() {
@@ -482,8 +413,8 @@ func manualRun() {
 }
 
 func main() {
-	lambda.Start(handler)
-	// manualRun()
+	// lambda.Start(handler)
+	manualRun()
 }
 
 func flattenTests(tests []KnowBe4SecurityTest) ([]KnowBe4FlatSecurityTest, error) {
@@ -563,6 +494,47 @@ func flattenRecipient(recipient KnowBe4Recipient) (KnowBe4FlatRecipient, error) 
 	flatRecipient.TemplateName = recipient.Template.Name
 
 	return flatRecipient, nil
+}
+
+func flattenCampaigns(recipients []KnowBe4Campaign) ([]KnowBe4FlatCampaign, error) {
+	flatCampaigns := make([]KnowBe4FlatCampaign, len(recipients))
+	for i, recipient := range recipients {
+		flatCampaign, err := flattenCampaign(recipient)
+		if err != nil {
+			return flatCampaigns, err
+		}
+		flatCampaigns[i] = flatCampaign
+	}
+	return flatCampaigns, nil
+}
+
+func flattenCampaign(campaign KnowBe4Campaign) (KnowBe4FlatCampaign, error) {
+	var flatCampaign KnowBe4FlatCampaign
+	if err := ConvertToOtherType(campaign, &flatCampaign); err != nil {
+		return flatCampaign, err
+	}
+
+	flatCampaign.Groups = flattenGroups(campaign.Groups)
+	flatCampaign.DifficultyFilter = flattenIntSlice(campaign.DifficultyFilter)
+	flatCampaign.Psts = flattenPstSlice(campaign.Psts)
+
+	return flatCampaign, nil
+}
+
+func flattenIntSlice(intSlice []int) string {
+	stringSlice := make([]string, len(intSlice))
+	for i := range intSlice {
+		stringSlice[i] = strconv.Itoa(intSlice[i])
+	}
+	return strings.Join(stringSlice, ",")
+}
+
+func flattenPstSlice(pstSlice []PstSummary) string {
+	stringSlice := make([]string, len(pstSlice))
+	for i := range pstSlice {
+		stringSlice[i] = strconv.Itoa(pstSlice[i].PstId)
+	}
+	return strings.Join(stringSlice, ",")
 }
 
 // ConvertToOtherType uses json marshal/unmarshal to convert one type to another.
