@@ -140,13 +140,18 @@ const exampleFlatRecipient = `{
     "os": "MacOSX"
   }`
 
-const exampleCampaign = `{
+const exampleCampaigns = `[
+{
     "campaign_id": 242333,
     "name": "One Time Phishing Security Test",
     "groups": [
       {
         "group_id": 0,
         "name": "All Users"
+      },
+      {
+        "group_id": 1,
+        "name": "Contractors"
       }
     ],
     "last_phish_prone_percentage": 0.3,
@@ -164,7 +169,7 @@ const exampleCampaign = `{
       5
     ],
     "create_date": "2019-04-02T15:02:38.000Z",
-    "psts_count": 1,
+    "psts_count": 2,
     "psts": [
       {
         "pst_id": 1,
@@ -172,14 +177,26 @@ const exampleCampaign = `{
         "start_date": "2019-04-02T15:02:38.000Z",
         "users_count": 123,
         "phish_prone_percentage": 0.3
+      },
+      {
+        "pst_id": 29,
+        "status": "Open",
+        "start_date": "2019-04-03T16:08:38.000Z",
+        "users_count": 2,
+        "phish_prone_percentage": 0.5
       }
     ]
-  }`
+  },
+  {
+    "campaign_id": 242399
+  }
+]`
 
-const exampleFlatCampaign = `{
+const exampleFlatCampaigns = `[
+  {
     "campaign_id": 242333,
     "name": "One Time Phishing Security Test",
-    "all_groups": "All Users",
+    "all_groups": "All Users,Contractors",
     "last_phish_prone_percentage": 0.3,
     "last_run": "2019-04-02T15:02:38.000Z",
     "status": "Closed",
@@ -189,6 +206,10 @@ const exampleFlatCampaign = `{
     "frequency": "One Time",
     "all_difficulty_filter": "1,2,3,4,5",
     "create_date": "2019-04-02T15:02:38.000Z",
-    "psts_count": 1,
-    "all_psts": "1"
-  }`
+    "psts_count": 2,
+    "all_psts": "1,29"
+  },
+  {
+    "campaign_id": 242399
+  }
+]`

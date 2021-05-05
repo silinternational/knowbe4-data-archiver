@@ -52,11 +52,11 @@ func Test_getAllRecipientsForSecurityTest(t *testing.T) {
 func Test_getAllCampaigns(t *testing.T) {
 	assert := require.New(t)
 
-	testURL := getTestServer("/"+campaignsURLPath, "["+exampleCampaign+"]")
+	testURL := getTestServer("/"+campaignsURLPath, exampleCampaigns)
 
 	var want []KnowBe4FlatCampaign
 
-	exBytes := []byte(("[" + exampleFlatCampaign + "]"))
+	exBytes := []byte((exampleFlatCampaigns))
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
