@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -413,8 +414,8 @@ func manualRun() {
 }
 
 func main() {
-	// lambda.Start(handler)
-	manualRun()
+	lambda.Start(handler)
+	// manualRun()
 }
 
 func flattenTests(tests []KnowBe4SecurityTest) ([]KnowBe4FlatSecurityTest, error) {
