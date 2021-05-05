@@ -73,9 +73,9 @@ type KnowBe4SecurityTest struct {
 		GroupID int    `json:"group_id"`
 		Name    string `json:"name"`
 	} `json:"groups"`
-	PhishPronePercentage float64   `json:"phish_prone_percentage"`
-	StartedAt            time.Time `json:"started_at"`
-	Duration             int       `json:"duration"`
+	PhishPronePercentage float64    `json:"phish_prone_percentage"`
+	StartedAt            *time.Time `json:"started_at"`
+	Duration             int        `json:"duration"`
 	Categories           []struct {
 		CategoryID int    `json:"category_id"`
 		Name       string `json:"name"`
@@ -103,31 +103,31 @@ type KnowBe4SecurityTest struct {
 }
 
 type KnowBe4FlatSecurityTest struct {
-	CampaignID            int       `json:"campaign_id"`
-	PstID                 int       `json:"pst_id"`
-	Status                string    `json:"status"`
-	Name                  string    `json:"name"`
-	Groups                string    `json:"all_groups"`
-	PhishPronePercentage  float64   `json:"phish_prone_percentage"`
-	StartedAt             time.Time `json:"started_at"`
-	Duration              int       `json:"duration"`
-	Categories            string    `json:"all_categories"`
-	TemplateID            int       `json:"template_id"`
-	TemplateName          string    `json:"template_name"`
-	LandingPageID         int       `json:"landing_page_id"`
-	LandingPageName       string    `json:"landing_page_name"`
-	ScheduledCount        int       `json:"scheduled_count"`
-	DeliveredCount        int       `json:"delivered_count"`
-	OpenedCount           int       `json:"opened_count"`
-	ClickedCount          int       `json:"clicked_count"`
-	RepliedCount          int       `json:"replied_count"`
-	AttachmentOpenCount   int       `json:"attachment_open_count"`
-	MacroEnabledCount     int       `json:"macro_enabled_count"`
-	DataEnteredCount      int       `json:"data_entered_count"`
-	VulnerablePluginCount int       `json:"vulnerable_plugin_count"`
-	ExploitedCount        int       `json:"exploited_count"`
-	ReportedCount         int       `json:"reported_count"`
-	BouncedCount          int       `json:"bounced_count"`
+	CampaignID            int        `json:"campaign_id"`
+	PstID                 int        `json:"pst_id"`
+	Status                string     `json:"status"`
+	Name                  string     `json:"name"`
+	Groups                string     `json:"all_groups"`
+	PhishPronePercentage  float64    `json:"phish_prone_percentage"`
+	StartedAt             *time.Time `json:"started_at"`
+	Duration              int        `json:"duration"`
+	Categories            string     `json:"all_categories"`
+	TemplateID            int        `json:"template_id"`
+	TemplateName          string     `json:"template_name"`
+	LandingPageID         int        `json:"landing_page_id"`
+	LandingPageName       string     `json:"landing_page_name"`
+	ScheduledCount        int        `json:"scheduled_count"`
+	DeliveredCount        int        `json:"delivered_count"`
+	OpenedCount           int        `json:"opened_count"`
+	ClickedCount          int        `json:"clicked_count"`
+	RepliedCount          int        `json:"replied_count"`
+	AttachmentOpenCount   int        `json:"attachment_open_count"`
+	MacroEnabledCount     int        `json:"macro_enabled_count"`
+	DataEnteredCount      int        `json:"data_entered_count"`
+	VulnerablePluginCount int        `json:"vulnerable_plugin_count"`
+	ExploitedCount        int        `json:"exploited_count"`
+	ReportedCount         int        `json:"reported_count"`
+	BouncedCount          int        `json:"bounced_count"`
 }
 
 type KnowBe4Campaign struct {
@@ -138,39 +138,39 @@ type KnowBe4Campaign struct {
 		Name    string `json:"name"`
 	} `json:"groups"`
 	LastPhishPronePercentage float64      `json:"last_phish_prone_percentage"`
-	LastRun                  time.Time    `json:"last_run"`
+	LastRun                  *time.Time   `json:"last_run"`
 	Status                   string       `json:"status"`
 	Hidden                   bool         `json:"hidden"`
 	SendDuration             string       `json:"send_duration"`
 	TrackDuration            string       `json:"track_duration"`
 	Frequency                string       `json:"frequency"`
 	DifficultyFilter         []int        `json:"difficulty_filter"`
-	CreateDate               time.Time    `json:"create_date"`
+	CreateDate               *time.Time   `json:"create_date"`
 	PstsCount                int          `json:"psts_count"`
 	Psts                     []PstSummary `json:"psts"`
 }
 
 type PstSummary struct {
-	PstId                int       `json:"pst_id"`
-	Status               string    `json:"status"`
-	StartDate            time.Time `json:"start_date"`
-	UsersCount           int       `json:"users_count"`
-	PhishPronePercentage float64   `json:"phish_prone_percentage"`
+	PstId                int        `json:"pst_id"`
+	Status               string     `json:"status"`
+	StartDate            *time.Time `json:"start_date"`
+	UsersCount           int        `json:"users_count"`
+	PhishPronePercentage float64    `json:"phish_prone_percentage"`
 }
 
 type KnowBe4FlatCampaign struct {
-	CampaignID               int       `json:"campaign_id"`
-	Name                     string    `json:"name"`
-	Groups                   string    `json:"all_groups"`
-	LastPhishPronePercentage float64   `json:"last_phish_prone_percentage"`
-	LastRun                  time.Time `json:"last_run"`
-	Status                   string    `json:"status"`
-	Hidden                   bool      `json:"hidden"`
-	SendDuration             string    `json:"send_duration"`
-	TrackDuration            string    `json:"track_duration"`
-	Frequency                string    `json:"frequency"`
-	DifficultyFilter         string    `json:"all_difficulty_filter"`
-	CreateDate               time.Time `json:"create_date"`
-	PstsCount                int       `json:"psts_count"`
-	Psts                     string    `json:"all_psts"`
+	CampaignID               int        `json:"campaign_id"`
+	Name                     string     `json:"name"`
+	Groups                   string     `json:"all_groups"`
+	LastPhishPronePercentage float64    `json:"last_phish_prone_percentage"`
+	LastRun                  *time.Time `json:"last_run"`
+	Status                   string     `json:"status"`
+	Hidden                   bool       `json:"hidden"`
+	SendDuration             string     `json:"send_duration"`
+	TrackDuration            string     `json:"track_duration"`
+	Frequency                string     `json:"frequency"`
+	DifficultyFilter         string     `json:"all_difficulty_filter"`
+	CreateDate               *time.Time `json:"create_date"`
+	PstsCount                int        `json:"psts_count"`
+	Psts                     string     `json:"all_psts"`
 }
