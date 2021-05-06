@@ -40,10 +40,9 @@ const (
 
 const (
 	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
-	groupsPath                 = "groups/"
-	groupsFilename             = groupsPath + "knowbe4_groups.json"
+	groupsFilename             = "groups/knowbe4_groups.json"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
-	riskScoreHistoryFilename   = "risk_score_history.json"
+	riskScoreHistoryFilename   = "groups_history/risk_score_history.json"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 )
 
@@ -490,8 +489,7 @@ func saveGroupsHistory(config LambdaConfig, groups []KnowBe4Group) error {
 		}
 
 	}
-	filename := fmt.Sprintf("%s%s", groupsPath, riskScoreHistoryFilename)
-	return saveToS3(&allHistory, config.AWSS3Bucket, filename)
+	return saveToS3(&allHistory, config.AWSS3Bucket, riskScoreHistoryFilename)
 }
 
 func manualRun() {
