@@ -22,12 +22,14 @@ import (
 const (
 	countPerPage     = 500
 	maxErrorsAllowed = 5
+)
+
+const (
+	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1campaigns/get
+	campaignsURLPath = "v1/phishing/campaigns"
 
 	// https://developer.knowbe4.com/reporting/#tag/Groups/paths/~1v1~1groups/get
 	groupsURLPath = "v1/groups"
-
-	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1campaigns/get
-	campaignsURLPath = "v1/phishing/campaigns"
 
 	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests~1{pst_id}~1recipients/get
 	recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
@@ -37,8 +39,8 @@ const (
 )
 
 const (
-	groupsFilename             = "groups/knowbe4_groups.json"
 	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
+	groupsFilename             = "groups/knowbe4_groups.json"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 )
