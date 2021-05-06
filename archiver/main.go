@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	s3RecipientsFilenamePrefix = "knowbe4_recipients_"
+	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
 	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
 )

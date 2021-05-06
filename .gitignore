@@ -2,3 +2,4 @@
 .serverless/
 *.aes
 *.env
+bin/
