@@ -563,8 +563,8 @@ func flattenRecipient(recipient KnowBe4Recipient) (KnowBe4FlatRecipient, error) 
 
 func flattenCampaigns(campaigns []KnowBe4Campaign) ([]KnowBe4FlatCampaign, error) {
 	flatCampaigns := make([]KnowBe4FlatCampaign, len(campaigns))
-	for i, recipient := range campaigns {
-		flatCampaign, err := flattenCampaign(recipient)
+	for i, c := range campaigns {
+		flatCampaign, err := flattenCampaign(c)
 		if err != nil {
 			return flatCampaigns, err
 		}
