@@ -213,3 +213,60 @@ const exampleFlatCampaigns = `[
     "campaign_id": 242399
   }
 ]`
+
+const exampleGroups = `[
+  {
+    "id": 2184841,
+    "name": "!SawPhish Monitors",
+    "group_type": "console_group",
+    "adi_guid": null,
+    "member_count": 0,
+    "current_risk_score": 0.0,
+    "risk_score_history": [],
+    "status": "active"
+  },
+  {
+    "id": 1629520,
+    "name": "!SG - Advanced Phishing",
+    "group_type": "smart_group",
+    "adi_guid": null,
+    "member_count": 3432,
+    "current_risk_score": 35.18206022600573,
+    "risk_score_history": [
+      {
+        "risk_score": 32.7108,
+        "date": "2020-11-06"
+      },
+      {
+        "risk_score": 32.6839,
+        "date": "2020-11-07"
+      },
+      {
+        "risk_score": 33.0323,
+        "date": "2020-11-08"
+      }
+    ],
+    "status": "active"
+  }
+]`
+
+const exampleFlatGroups = `[
+  {
+    "id": 2184841,
+    "name": "!SawPhish Monitors",
+    "group_type": "console_group",
+    "adi_guid": null,
+    "member_count": 0,
+    "current_risk_score": 0.0,
+    "status": "active"
+  },
+  {
+    "id": 1629520,
+    "name": "!SG - Advanced Phishing",
+    "group_type": "smart_group",
+    "adi_guid": null,
+    "member_count": 3432,
+    "current_risk_score": 35.18206022600573,
+    "status": "active"
+  }
+]`

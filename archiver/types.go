@@ -65,17 +65,14 @@ type KnowBe4FlatRecipient struct {
 }
 
 type KnowBe4SecurityTest struct {
-	CampaignID int    `json:"campaign_id"`
-	PstID      int    `json:"pst_id"`
-	Status     string `json:"status"`
-	Name       string `json:"name"`
-	Groups     []struct {
-		GroupID int    `json:"group_id"`
-		Name    string `json:"name"`
-	} `json:"groups"`
-	PhishPronePercentage float64    `json:"phish_prone_percentage"`
-	StartedAt            *time.Time `json:"started_at"`
-	Duration             int        `json:"duration"`
+	CampaignID           int            `json:"campaign_id"`
+	PstID                int            `json:"pst_id"`
+	Status               string         `json:"status"`
+	Name                 string         `json:"name"`
+	Groups               []GroupSummary `json:"groups"`
+	PhishPronePercentage float64        `json:"phish_prone_percentage"`
+	StartedAt            *time.Time     `json:"started_at"`
+	Duration             int            `json:"duration"`
 	Categories           []struct {
 		CategoryID int    `json:"category_id"`
 		Name       string `json:"name"`
@@ -131,23 +128,25 @@ type KnowBe4FlatSecurityTest struct {
 }
 
 type KnowBe4Campaign struct {
-	CampaignID int    `json:"campaign_id"`
-	Name       string `json:"name"`
-	Groups     []struct {
-		GroupID int    `json:"group_id"`
-		Name    string `json:"name"`
-	} `json:"groups"`
-	LastPhishPronePercentage float64      `json:"last_phish_prone_percentage"`
-	LastRun                  *time.Time   `json:"last_run"`
-	Status                   string       `json:"status"`
-	Hidden                   bool         `json:"hidden"`
-	SendDuration             string       `json:"send_duration"`
-	TrackDuration            string       `json:"track_duration"`
-	Frequency                string       `json:"frequency"`
-	DifficultyFilter         []int        `json:"difficulty_filter"`
-	CreateDate               *time.Time   `json:"create_date"`
-	PstsCount                int          `json:"psts_count"`
-	Psts                     []PstSummary `json:"psts"`
+	CampaignID               int            `json:"campaign_id"`
+	Name                     string         `json:"name"`
+	Groups                   []GroupSummary `json:"groups"`
+	LastPhishPronePercentage float64        `json:"last_phish_prone_percentage"`
+	LastRun                  *time.Time     `json:"last_run"`
+	Status                   string         `json:"status"`
+	Hidden                   bool           `json:"hidden"`
+	SendDuration             string         `json:"send_duration"`
+	TrackDuration            string         `json:"track_duration"`
+	Frequency                string         `json:"frequency"`
+	DifficultyFilter         []int          `json:"difficulty_filter"`
+	CreateDate               *time.Time     `json:"create_date"`
+	PstsCount                int            `json:"psts_count"`
+	Psts                     []PstSummary   `json:"psts"`
+}
+
+type GroupSummary struct {
+	GroupID int    `json:"group_id"`
+	Name    string `json:"name"`
 }
 
 type PstSummary struct {
@@ -173,4 +172,30 @@ type KnowBe4FlatCampaign struct {
 	CreateDate               *time.Time `json:"create_date"`
 	PstsCount                int        `json:"psts_count"`
 	Psts                     string     `json:"all_psts"`
+}
+
+type KnowBe4Group struct {
+	Id               int                `json:"id"`
+	Name             string             `json:"name"`
+	GroupType        string             `json:"group_type"`
+	AdiGuid          string             `json:"adi_guid"`
+	MemberCount      int                `json:"member_count"`
+	CurrentRiskScore float64            `json:"current_risk_score"`
+	RiskScoreHistory []RiskScoreHistory `json:"risk_score_history"`
+	Status           string             `json:"status"`
+}
+
+type RiskScoreHistory struct {
+	RiskScore float64 `json:"risk_score"`
+	Date      string  `json:"date"`
+}
+
+type KnowBe4FlatGroup struct {
+	Id               int     `json:"id"`
+	Name             string  `json:"name"`
+	GroupType        string  `json:"group_type"`
+	AdiGuid          string  `json:"adi_guid"`
+	MemberCount      int     `json:"member_count"`
+	CurrentRiskScore float64 `json:"current_risk_score"`
+	Status           string  `json:"status"`
 }
