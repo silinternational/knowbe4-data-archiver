@@ -186,6 +186,7 @@ type KnowBe4Group struct {
 }
 
 type RiskScoreHistory struct {
+	GroupID   int     `json:"group_id,omitempty"`
 	RiskScore float64 `json:"risk_score"`
 	Date      string  `json:"date"`
 }

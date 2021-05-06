@@ -42,6 +42,7 @@ const (
 	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
 	groupsFilename             = "groups/knowbe4_groups.json"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
+	riskScoreHistoryFilename   = "groups_history/risk_score_history.json"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 )
 
@@ -295,7 +296,7 @@ func getGroupsPage(pageNum int, config LambdaConfig) ([]KnowBe4Group, error) {
 	return groups, nil
 }
 
-func getAllGroups(config LambdaConfig) ([]KnowBe4FlatGroup, error) {
+func getAllGroups(config LambdaConfig) ([]KnowBe4Group, error) {
 	var allGroups []KnowBe4Group
 
 	for i := 1; ; i++ {
@@ -312,9 +313,7 @@ func getAllGroups(config LambdaConfig) ([]KnowBe4FlatGroup, error) {
 		}
 	}
 
-	flatResults, err := flattenGroups(allGroups)
-
-	return flatResults, err
+	return allGroups, nil
 }
 
 func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitGroup, c chan error) {
@@ -388,18 +387,17 @@ func saveRecipientsToS3Async(config LambdaConfig, secTests []KnowBe4FlatSecurity
 func saveToS3(data interface{}, bucketName, fileName string) error {
 	b, err := json.Marshal(data)
 	if err != nil {
-		return errors.New("error marshalling security tests results for saving to S3 ..." + err.Error())
+		return errors.New("error marshalling data for saving to S3 ..." + err.Error())
 	}
 
-	sess := session.Must(session.NewSession())
-	uploader := s3manager.NewUploader(sess)
+	uploader := s3manager.NewUploader(session.Must(session.NewSession()))
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(fileName),
 		Body:   bytes.NewReader(b),
 	})
 	if err != nil {
-		return fmt.Errorf("Error saving data to %s/%s ... %s", bucketName, fileName, err)
+		return fmt.Errorf("error saving data to %s/%s ... %s", bucketName, fileName, err)
 	}
 
 	return nil
@@ -459,10 +457,39 @@ func getAndSaveGroups(config LambdaConfig) error {
 	if err != nil {
 		return errors.New("error getting groups from KnowBe4 ..." + err.Error())
 	}
-	if err := saveToS3(&groups, config.AWSS3Bucket, groupsFilename); err != nil {
+
+	flatGroups, err := flattenGroups(groups)
+	if err != nil {
+		return errors.New("error flattening groups ..." + err.Error())
+	}
+
+	if err := saveToS3(&flatGroups, config.AWSS3Bucket, groupsFilename); err != nil {
 		return errors.New("error saving groups to S3 ..." + err.Error())
 	}
+
+	if err := saveGroupsHistory(config, groups); err != nil {
+		return errors.New("error saving groups history ..." + err.Error())
+	}
+
 	return nil
+}
+
+func saveGroupsHistory(config LambdaConfig, groups []KnowBe4Group) error {
+	var allHistory []RiskScoreHistory
+	for _, group := range groups {
+		if len(group.RiskScoreHistory) == 0 {
+			continue
+		}
+
+		h := RiskScoreHistory{GroupID: group.Id}
+		for i := range group.RiskScoreHistory {
+			h.RiskScore = group.RiskScoreHistory[i].RiskScore
+			h.Date = group.RiskScoreHistory[i].Date
+			allHistory = append(allHistory, h)
+		}
+
+	}
+	return saveToS3(&allHistory, config.AWSS3Bucket, riskScoreHistoryFilename)
 }
 
 func manualRun() {
