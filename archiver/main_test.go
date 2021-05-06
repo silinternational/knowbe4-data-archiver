@@ -71,15 +71,29 @@ func Test_getAllGroups(t *testing.T) {
 
 	testURL := getTestServer("/"+groupsURLPath, exampleGroups)
 
-	var want []KnowBe4FlatGroup
-
-	exBytes := []byte((exampleFlatGroups))
-	err := json.Unmarshal(exBytes, &want)
+	var want []KnowBe4Group
+	err := json.Unmarshal([]byte(exampleGroups), &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
 	got, err := getAllGroups(LambdaConfig{APIBaseURL: testURL})
 	assert.NoError(err)
 
+	assert.Equal(want, got, "bad struct results")
+}
+
+func Test_flattenGroups(t *testing.T) {
+	assert := require.New(t)
+
+	var fixture []KnowBe4Group
+	err := json.Unmarshal([]byte(exampleGroups), &fixture)
+	assert.NoError(err, "error unmarshalling groups")
+
+	var want []KnowBe4FlatGroup
+	err = json.Unmarshal([]byte(exampleFlatGroups), &want)
+	assert.NoError(err, "error unmarshalling flat groups")
+
+	got, err := flattenGroups(fixture)
+	assert.NoError(err, "unexpected error from flattenGroups")
 	assert.Equal(want, got, "bad struct results")
 }
 
