@@ -22,21 +22,28 @@ import (
 const (
 	countPerPage     = 500
 	maxErrorsAllowed = 5
+)
+
+const (
+	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1campaigns/get
+	campaignsURLPath = "v1/phishing/campaigns"
+
+	// https://developer.knowbe4.com/reporting/#tag/Groups/paths/~1v1~1groups/get
+	groupsURLPath = "v1/groups"
 
 	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests~1{pst_id}~1recipients/get
 	recipientsURLPath = "v1/phishing/security_tests/%v/recipients"
 
 	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests/get
 	securityTestURLPath = "v1/phishing/security_tests"
-
-	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1campaigns/get
-	campaignsURLPath = "v1/phishing/campaigns"
 )
 
 const (
-	s3RecipientsFilenamePrefix = "knowbe4_recipients_"
-	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
 	campaignsFilename          = "campaigns/knowbe4_campaigns.json"
+	groupsFilename             = "groups/knowbe4_groups.json"
+	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.json"
+	riskScoreHistoryFilename   = "groups_history/risk_score_history.json"
+	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 )
 
 const (
@@ -265,6 +272,50 @@ func getAllCampaigns(config LambdaConfig) ([]KnowBe4FlatCampaign, error) {
 	return flatResults, err
 }
 
+func getGroupsPage(pageNum int, config LambdaConfig) ([]KnowBe4Group, error) {
+	queryParams := map[string]string{
+		"per_page": strconv.Itoa(countPerPage),
+		"page":     strconv.Itoa(pageNum),
+	}
+
+	// Make http call
+	resp, err := callAPI(groupsURLPath, config, queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	var groups []KnowBe4Group
+
+	if err := json.Unmarshal(bodyBytes, &groups); err != nil {
+		return nil, fmt.Errorf("error decoding response json for groups: %s", err)
+	}
+
+	return groups, nil
+}
+
+func getAllGroups(config LambdaConfig) ([]KnowBe4Group, error) {
+	var allGroups []KnowBe4Group
+
+	for i := 1; ; i++ {
+		c, err := getGroupsPage(i, config)
+		if err != nil {
+			err = fmt.Errorf("error fetching page %v ... %s", i, err)
+			return nil, err
+		}
+
+		allGroups = append(allGroups, c...)
+
+		if len(c) < countPerPage {
+			break
+		}
+	}
+
+	return allGroups, nil
+}
+
 func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitGroup, c chan error) {
 	defer wg.Done()
 
@@ -336,18 +387,17 @@ func saveRecipientsToS3Async(config LambdaConfig, secTests []KnowBe4FlatSecurity
 func saveToS3(data interface{}, bucketName, fileName string) error {
 	b, err := json.Marshal(data)
 	if err != nil {
-		return errors.New("error marshalling security tests results for saving to S3 ..." + err.Error())
+		return errors.New("error marshalling data for saving to S3 ..." + err.Error())
 	}
 
-	sess := session.Must(session.NewSession())
-	uploader := s3manager.NewUploader(sess)
+	uploader := s3manager.NewUploader(session.Must(session.NewSession()))
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(fileName),
 		Body:   bytes.NewReader(b),
 	})
 	if err != nil {
-		return fmt.Errorf("Error saving data to %s/%s ... %s", bucketName, fileName, err)
+		return fmt.Errorf("error saving data to %s/%s ... %s", bucketName, fileName, err)
 	}
 
 	return nil
@@ -360,6 +410,10 @@ func handler(config LambdaConfig) error {
 
 	if err := getAndSaveCampaigns(config); err != nil {
 		return errors.New("error saving campaigns ... " + err.Error())
+	}
+
+	if err := getAndSaveGroups(config); err != nil {
+		return errors.New("error saving groups ... " + err.Error())
 	}
 
 	_, stResults, err := getAllSecurityTests(config)
@@ -396,6 +450,46 @@ func getAndSaveCampaigns(config LambdaConfig) error {
 		return errors.New("error saving campaigns to S3 ..." + err.Error())
 	}
 	return nil
+}
+
+func getAndSaveGroups(config LambdaConfig) error {
+	groups, err := getAllGroups(config)
+	if err != nil {
+		return errors.New("error getting groups from KnowBe4 ..." + err.Error())
+	}
+
+	flatGroups, err := flattenGroups(groups)
+	if err != nil {
+		return errors.New("error flattening groups ..." + err.Error())
+	}
+
+	if err := saveToS3(&flatGroups, config.AWSS3Bucket, groupsFilename); err != nil {
+		return errors.New("error saving groups to S3 ..." + err.Error())
+	}
+
+	if err := saveGroupsHistory(config, groups); err != nil {
+		return errors.New("error saving groups history ..." + err.Error())
+	}
+
+	return nil
+}
+
+func saveGroupsHistory(config LambdaConfig, groups []KnowBe4Group) error {
+	var allHistory []RiskScoreHistory
+	for _, group := range groups {
+		if len(group.RiskScoreHistory) == 0 {
+			continue
+		}
+
+		h := RiskScoreHistory{GroupID: group.Id}
+		for i := range group.RiskScoreHistory {
+			h.RiskScore = group.RiskScoreHistory[i].RiskScore
+			h.Date = group.RiskScoreHistory[i].Date
+			allHistory = append(allHistory, h)
+		}
+
+	}
+	return saveToS3(&allHistory, config.AWSS3Bucket, riskScoreHistoryFilename)
 }
 
 func manualRun() {
@@ -436,7 +530,7 @@ func flattenTest(test KnowBe4SecurityTest) (KnowBe4FlatSecurityTest, error) {
 		return flatTest, err
 	}
 
-	flatTest.Groups = flattenGroups(test.Groups)
+	flatTest.Groups = flattenGroupSummaries(test.Groups)
 	flatTest.Categories = flattenCategories(test.Categories)
 	flatTest.TemplateID = test.Template.ID
 	flatTest.TemplateName = test.Template.Name
@@ -446,10 +540,7 @@ func flattenTest(test KnowBe4SecurityTest) (KnowBe4FlatSecurityTest, error) {
 	return flatTest, nil
 }
 
-func flattenGroups(groups []struct {
-	GroupID int    `json:"group_id"`
-	Name    string `json:"name"`
-}) string {
+func flattenGroupSummaries(groups []GroupSummary) string {
 	groupNames := make([]string, len(groups))
 	for i := range groups {
 		groupNames[i] = groups[i].Name
@@ -497,10 +588,10 @@ func flattenRecipient(recipient KnowBe4Recipient) (KnowBe4FlatRecipient, error) 
 	return flatRecipient, nil
 }
 
-func flattenCampaigns(recipients []KnowBe4Campaign) ([]KnowBe4FlatCampaign, error) {
-	flatCampaigns := make([]KnowBe4FlatCampaign, len(recipients))
-	for i, recipient := range recipients {
-		flatCampaign, err := flattenCampaign(recipient)
+func flattenCampaigns(campaigns []KnowBe4Campaign) ([]KnowBe4FlatCampaign, error) {
+	flatCampaigns := make([]KnowBe4FlatCampaign, len(campaigns))
+	for i, c := range campaigns {
+		flatCampaign, err := flattenCampaign(c)
 		if err != nil {
 			return flatCampaigns, err
 		}
@@ -515,7 +606,7 @@ func flattenCampaign(campaign KnowBe4Campaign) (KnowBe4FlatCampaign, error) {
 		return flatCampaign, err
 	}
 
-	flatCampaign.Groups = flattenGroups(campaign.Groups)
+	flatCampaign.Groups = flattenGroupSummaries(campaign.Groups)
 	flatCampaign.DifficultyFilter = flattenIntSlice(campaign.DifficultyFilter)
 	flatCampaign.Psts = flattenPstSlice(campaign.Psts)
 
@@ -536,6 +627,27 @@ func flattenPstSlice(pstSlice []PstSummary) string {
 		stringSlice[i] = strconv.Itoa(pstSlice[i].PstId)
 	}
 	return strings.Join(stringSlice, ",")
+}
+
+func flattenGroups(groups []KnowBe4Group) ([]KnowBe4FlatGroup, error) {
+	flatGroups := make([]KnowBe4FlatGroup, len(groups))
+	for i, group := range groups {
+		flatGroup, err := flattenGroup(group)
+		if err != nil {
+			return flatGroups, err
+		}
+		flatGroups[i] = flatGroup
+	}
+	return flatGroups, nil
+}
+
+func flattenGroup(group KnowBe4Group) (KnowBe4FlatGroup, error) {
+	var flatGroup KnowBe4FlatGroup
+	if err := ConvertToOtherType(group, &flatGroup); err != nil {
+		return flatGroup, err
+	}
+
+	return flatGroup, nil
 }
 
 // ConvertToOtherType uses json marshal/unmarshal to convert one type to another.
