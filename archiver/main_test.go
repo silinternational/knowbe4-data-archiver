@@ -16,9 +16,9 @@ func Test_getAllSecurityTests(t *testing.T) {
 
 	testURL := getTestServer("/"+securityTestURLPath, "["+exampleSecurityTest+"]")
 
-	var want []KnowBe4FlatSecurityTest
+	var want []KnowBe4SecurityTest
 
-	exBytes := []byte(("[" + exampleFlatSecurityTest + "]"))
+	exBytes := []byte(("[" + exampleSecurityTest + "]"))
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
@@ -36,9 +36,9 @@ func Test_getAllRecipientsForSecurityTest(t *testing.T) {
 	path := "/" + fmt.Sprintf(recipientsURLPath, secTestID)
 	testURL := getTestServer(path, "["+exampleRecipient+"]")
 
-	var want []KnowBe4FlatRecipient
+	var want []KnowBe4Recipient
 
-	exBytes := []byte(("[" + exampleFlatRecipient + "]"))
+	exBytes := []byte(("[" + exampleRecipient + "]"))
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
@@ -54,9 +54,9 @@ func Test_getAllCampaigns(t *testing.T) {
 
 	testURL := getTestServer("/"+campaignsURLPath, exampleCampaigns)
 
-	var want []KnowBe4FlatCampaign
+	var want []KnowBe4Campaign
 
-	exBytes := []byte((exampleFlatCampaigns))
+	exBytes := []byte((exampleCampaigns))
 	err := json.Unmarshal(exBytes, &want)
 	assert.NoError(err, "error unmarshalling fixtures")
 
@@ -78,22 +78,6 @@ func Test_getAllGroups(t *testing.T) {
 	got, err := getAllGroups(LambdaConfig{APIBaseURL: testURL})
 	assert.NoError(err)
 
-	assert.Equal(want, got, "bad struct results")
-}
-
-func Test_flattenGroups(t *testing.T) {
-	assert := require.New(t)
-
-	var fixture []KnowBe4Group
-	err := json.Unmarshal([]byte(exampleGroups), &fixture)
-	assert.NoError(err, "error unmarshalling groups")
-
-	var want []KnowBe4FlatGroup
-	err = json.Unmarshal([]byte(exampleFlatGroups), &want)
-	assert.NoError(err, "error unmarshalling flat groups")
-
-	got, err := flattenGroups(fixture)
-	assert.NoError(err, "unexpected error from flattenGroups")
 	assert.Equal(want, got, "bad struct results")
 }
 
@@ -121,4 +105,78 @@ func getTestServer(path, response string) string {
 	mux.HandleFunc(path, handler)
 
 	return server.URL
+}
+
+func Test_marshalJsonLines(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   interface{}
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name:    "nil",
+			input:   nil,
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "not an array",
+			input:   KnowBe4Group{},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty array",
+			input:   []interface{}{},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name:    "single int",
+			input:   []interface{}{1},
+			want:    []byte("1\n"),
+			wantErr: false,
+		},
+		{
+			name: "single struct",
+			input: []interface{}{GroupSummary{
+				GroupID: 1,
+				Name:    "name",
+			}},
+			want:    []byte(`{"group_id":1,"name":"name"}` + "\n"),
+			wantErr: false,
+		},
+		{
+			name:    "two int items",
+			input:   []interface{}{1, 2},
+			want:    []byte("1\n2\n"),
+			wantErr: false,
+		},
+		{
+			name: "two struct items",
+			input: []interface{}{
+				GroupSummary{
+					GroupID: 1,
+					Name:    "name 1",
+				},
+				GroupSummary{
+					GroupID: 2,
+					Name:    "name 2",
+				},
+			},
+			want:    []byte(`{"group_id":1,"name":"name 1"}` + "\n" + `{"group_id":2,"name":"name 2"}` + "\n"),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := marshalJsonLines(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("marshalJsonLines() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			require.Equal(t, tt.want, got)
+		})
+	}
 }
