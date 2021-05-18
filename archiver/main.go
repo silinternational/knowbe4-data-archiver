@@ -38,10 +38,9 @@ const (
 )
 
 const (
-	campaignsFilename          = "campaigns/knowbe4_campaigns.jsonl"
+	campaignsFilename          = "campaigns/all_campaigns/knowbe4_campaigns.jsonl"
 	groupsFilename             = "groups/knowbe4_groups.jsonl"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.jsonl"
-	riskScoreHistoryFilename   = "groups_history/risk_score_history.jsonl"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
 )
 
