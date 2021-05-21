@@ -38,8 +38,6 @@ const (
 
 	// https://developer.knowbe4.com/reporting/#tag/Account/paths/~1v1~1account/get
 	usersURLPath = "v1/users"
-
-
 )
 
 const (
@@ -47,7 +45,7 @@ const (
 	groupsFilename             = "groups/knowbe4_groups.jsonl"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.jsonl"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
-	usersFilename = "users/knowbe4_users.jsonl"
+	usersFilename              = "users/knowbe4_users.jsonl"
 )
 
 const (

@@ -84,7 +84,7 @@ func Test_getAllGroups(t *testing.T) {
 func Test_getAllUsers(t *testing.T) {
 	assert := require.New(t)
 
-	testURL := getTestServer("/"+ usersURLPath, exampleUsers)
+	testURL := getTestServer("/"+usersURLPath, exampleUsers)
 
 	var want []KnowBe4User
 	err := json.Unmarshal([]byte(exampleUsers), &want)
