@@ -116,3 +116,41 @@ type RiskScoreHistory struct {
 	RiskScore float64 `json:"risk_score"`
 	Date      string  `json:"date"`
 }
+
+type KnowBe4User struct {
+	Id                   int                `json:"id"`
+	EmployeeNumber       string             `json:"employee_number"`
+	FirstName            string             `json:"first_name"`
+	LastName             string             `json:"last_name"`
+	JobTitle             string             `json:"job_title"`
+	Email                string             `json:"email"`
+	PhishPronePercentage float64            `json:"phish_prone_percentage"`
+	PhoneNumber          string             `json:"phone_number"`
+	Extension            string             `json:"extension"`
+	MobilePhoneNumber    string             `json:"mobile_phone_number"`
+	Location             string             `json:"location"`
+	Division             string             `json:"division"`
+	ManagerName          string             `json:"manager_name"`
+	ManagerEmail         string             `json:"manager_email"`
+	AdiManageable        bool               `json:"adi_manageable"`
+	AdiGuid              string             `json:"adi_guid"`
+	Groups               []int              `json:"groups"`
+	CurrentRiskScore     float64            `json:"current_risk_score"`
+	RiskScoreHistory     []RiskScoreHistory `json:"risk_score_history"`
+	Aliases              []string           `json:"aliases"`
+	JoinedOn             *time.Time         `json:"joined_on"`
+	LastSignIn           *time.Time         `json:"last_sign_in"`
+	Status               string             `json:"status"`
+	Organization         string             `json:"organization"`
+	Department           string             `json:"department"`
+	Language             string             `json:"language"`
+	Comment              string             `json:"comment"`
+	EmployeeStartDate    *time.Time         `json:"employee_start_date"`
+	ArchivedAt           *time.Time         `json:"archived_at"`
+	CustomField1         string             `json:"custom_field_1"`
+	CustomField2         string             `json:"custom_field_2"`
+	CustomField3         string             `json:"custom_field_3"`
+	CustomField4         string             `json:"custom_field_4"`
+	CustomDate1          *time.Time         `json:"custom_date_1"`
+	CustomDate2          *time.Time         `json:"custom_date_2"`
+}
