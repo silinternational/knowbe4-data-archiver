@@ -81,6 +81,21 @@ func Test_getAllGroups(t *testing.T) {
 	assert.Equal(want, got, "bad struct results")
 }
 
+func Test_getAllUsers(t *testing.T) {
+	assert := require.New(t)
+
+	testURL := getTestServer("/"+ usersURLPath, exampleUsers)
+
+	var want []KnowBe4User
+	err := json.Unmarshal([]byte(exampleUsers), &want)
+	assert.NoError(err, "error unmarshalling fixtures")
+
+	got, err := getAllUsers(LambdaConfig{APIBaseURL: testURL})
+	assert.NoError(err)
+
+	assert.Equal(want, got, "bad struct results")
+}
+
 func getTestHandler(responseBody string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		jsonBytes, err := json.Marshal(responseBody)
