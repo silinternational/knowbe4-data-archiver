@@ -153,4 +153,5 @@ type KnowBe4User struct {
 	CustomField4         string             `json:"custom_field_4"`
 	CustomDate1          *time.Time         `json:"custom_date_1"`
 	CustomDate2          *time.Time         `json:"custom_date_2"`
+	SnapshotDate         string             `json:"snapshot_date"`
 }
