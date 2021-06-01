@@ -170,3 +170,52 @@ const exampleGroups = `[
     "status": "active"
   }
 ]`
+
+const exampleUsers = `[
+  {
+    "id": 667542,
+    "employee_number": "19425",
+    "first_name": "William",
+    "last_name": "Marcoux",
+    "job_title": "VP of Sales",
+    "email": "wmarcoux@kb4-demo.com",
+    "phish_prone_percentage": 14.235,
+    "phone_number": "555-554-2222",
+    "extension": "42",
+    "mobile_phone_number": "555-553-4422",
+    "location": "Office A",
+    "division": "Sales",
+    "manager_name": "Michael Scott",
+    "manager_email": "mscott@kb4-demo.com",
+    "adi_manageable": false,
+    "adi_guid": null,
+    "groups": [
+    3264
+    ],
+    "current_risk_score": 45.742,
+    "risk_score_history": [
+    {
+    "risk_score": 45.742,
+    "date": "2019-03-12"
+    }
+    ],
+    "aliases": [
+    "alias_email@kb4-demo.com"
+    ],
+    "joined_on": "2019-04-02T15:02:38.000Z",
+    "last_sign_in": "2019-04-02T15:02:38.000Z",
+    "status": "active",
+    "organization": "KB4-Demo",
+    "department": "Sales",
+    "language": "English - United States",
+    "comment": "Low PPP",
+    "employee_start_date": "2019-04-02T15:02:38.000Z",
+    "archived_at": null,
+    "custom_field_1": "Building C, 4th Floor",
+    "custom_field_2": null,
+    "custom_field_3": null,
+    "custom_field_4": null,
+    "custom_date_1": null,
+    "custom_date_2": null
+    }
+]`
