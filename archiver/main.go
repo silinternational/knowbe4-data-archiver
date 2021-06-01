@@ -534,16 +534,15 @@ func getAndSaveUsers(config LambdaConfig) error {
 		return errors.New("error getting users from KnowBe4 ..." + err.Error())
 	}
 
-	currentTime := time.Now()
-	currTime := currentTime.Format("2006-01-02")
+	currentTime := time.Now().Format("2006-01-02")
 
 	list := make([]interface{}, len(users))
 	for i := range users {
-		users[i].SnapshotDate = currTime
+		users[i].SnapshotDate = currentTime
 		list[i] = users[i]
 	}
 
-	if err := saveToS3(list, config.AWSS3Bucket, usersFilenamePrefix+currTime); err != nil {
+	if err := saveToS3(list, config.AWSS3Bucket, usersFilenamePrefix+currentTime+".jsonl"); err != nil {
 		return errors.New("error saving users to S3 ..." + err.Error())
 	}
 
