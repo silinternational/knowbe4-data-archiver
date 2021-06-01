@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -45,7 +46,7 @@ const (
 	groupsFilename             = "groups/knowbe4_groups.jsonl"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.jsonl"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
-	usersFilename              = "users/knowbe4_users.jsonl"
+	usersFilenamePrefix        = "users/knowbe4_users_"
 )
 
 const (
@@ -358,7 +359,7 @@ func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitG
 
 	_, recipients, err := getAllRecipientsForSecurityTest(secTestID, config)
 	if err != nil {
-		err = fmt.Errorf("error gettings reciptients from api for security test %v ... %s", secTestID, err)
+		err = fmt.Errorf("error gettings recipients from api for security test %v ... %s", secTestID, err)
 		c <- err
 		return
 	}
@@ -533,11 +534,15 @@ func getAndSaveUsers(config LambdaConfig) error {
 		return errors.New("error getting users from KnowBe4 ..." + err.Error())
 	}
 
+	currentTime := time.Now().Format("2006-01-02")
+
 	list := make([]interface{}, len(users))
 	for i := range users {
+		users[i].SnapshotDate = currentTime
 		list[i] = users[i]
 	}
-	if err := saveToS3(list, config.AWSS3Bucket, usersFilename); err != nil {
+
+	if err := saveToS3(list, config.AWSS3Bucket, usersFilenamePrefix+currentTime+".jsonl"); err != nil {
 		return errors.New("error saving users to S3 ..." + err.Error())
 	}
 
@@ -563,6 +568,7 @@ func manualRun() {
 func main() {
 	lambda.Start(handler)
 	// manualRun()
+
 }
 
 // marshalJsonLines is a partial implementation of JSON Lines
