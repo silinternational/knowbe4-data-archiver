@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,6 +36,9 @@ const (
 
 	// https://developer.knowbe4.com/reporting/#tag/Phishing/paths/~1v1~1phishing~1security_tests/get
 	securityTestURLPath = "v1/phishing/security_tests"
+
+	// https://developer.knowbe4.com/reporting/#tag/Account/paths/~1v1~1account/get
+	usersURLPath = "v1/users"
 )
 
 const (
@@ -42,6 +46,7 @@ const (
 	groupsFilename             = "groups/knowbe4_groups.jsonl"
 	phishingTestsFilename      = "campaigns/pst/knowbe4_security_tests.jsonl"
 	s3RecipientsFilenamePrefix = "recipients/knowbe4_recipients_"
+	usersFilenamePrefix        = "users/knowbe4_users_"
 )
 
 const (
@@ -305,12 +310,56 @@ func getAllGroups(config LambdaConfig) ([]KnowBe4Group, error) {
 	return allGroups, nil
 }
 
+func getUsersPage(pageNum int, config LambdaConfig) ([]KnowBe4User, error) {
+	queryParams := map[string]string{
+		"per_page": strconv.Itoa(countPerPage),
+		"page":     strconv.Itoa(pageNum),
+	}
+
+	// Make http call
+	resp, err := callAPI(usersURLPath, config, queryParams)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	var users []KnowBe4User
+
+	if err := json.Unmarshal(bodyBytes, &users); err != nil {
+		return nil, fmt.Errorf("error decoding response json for users: %s", err)
+	}
+
+	return users, nil
+}
+
+func getAllUsers(config LambdaConfig) ([]KnowBe4User, error) {
+	var allUsers []KnowBe4User
+
+	for i := 1; ; i++ {
+		c, err := getUsersPage(i, config)
+		if err != nil {
+			err = fmt.Errorf("error fetching page %v ... %s", i, err)
+			return nil, err
+		}
+
+		allUsers = append(allUsers, c...)
+
+		if len(c) < countPerPage {
+			break
+		}
+	}
+
+	return allUsers, nil
+}
+
 func saveRecipientsForSecTest(secTestID int, config LambdaConfig, wg *sync.WaitGroup, c chan error) {
 	defer wg.Done()
 
 	_, recipients, err := getAllRecipientsForSecurityTest(secTestID, config)
 	if err != nil {
-		err = fmt.Errorf("error gettings reciptients from api for security test %v ... %s", secTestID, err)
+		err = fmt.Errorf("error gettings recipients from api for security test %v ... %s", secTestID, err)
 		c <- err
 		return
 	}
@@ -412,6 +461,10 @@ func handler(config LambdaConfig) error {
 		return errors.New("error saving groups ... " + err.Error())
 	}
 
+	if err := getAndSaveUsers(config); err != nil {
+		return errors.New("error saving users ... " + err.Error())
+	}
+
 	_, stResults, err := getAllSecurityTests(config)
 	if err != nil {
 		return errors.New("error getting security tests from api ..." + err.Error())
@@ -475,6 +528,28 @@ func getAndSaveGroups(config LambdaConfig) error {
 	return nil
 }
 
+func getAndSaveUsers(config LambdaConfig) error {
+	users, err := getAllUsers(config)
+	if err != nil {
+		return errors.New("error getting users from KnowBe4 ..." + err.Error())
+	}
+
+	currentTime := time.Now().Format("2006-01-02")
+
+	list := make([]interface{}, len(users))
+	for i := range users {
+		users[i].SnapshotDate = currentTime
+		list[i] = users[i]
+	}
+
+	if err := saveToS3(list, config.AWSS3Bucket, usersFilenamePrefix+currentTime+".jsonl"); err != nil {
+		return errors.New("error saving users to S3 ..." + err.Error())
+	}
+
+	log.Printf("saved %d users to S3", len(users))
+	return nil
+}
+
 func manualRun() {
 	var config LambdaConfig
 	if err := config.init(); err != nil {
@@ -493,6 +568,7 @@ func manualRun() {
 func main() {
 	lambda.Start(handler)
 	// manualRun()
+
 }
 
 // marshalJsonLines is a partial implementation of JSON Lines
