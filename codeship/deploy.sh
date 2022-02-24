@@ -14,4 +14,4 @@ export API_AUTH_TOKEN="${API_AUTH_TOKEN}"
 export AWS_S3_FILENAME="${AWS_S3_FILENAME}"
 export AWS_S3_BUCKET="${AWS_S3_BUCKET}"
 
-serverless deploy -v --stage dev
+serverless deploy --verbose --stage $1

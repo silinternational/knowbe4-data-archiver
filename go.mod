@@ -1,6 +1,6 @@
 module github.com/silinternational/knowbe4-data-archiver
 
-go 1.14
+go 1.17
 
 require (
 	github.com/aws/aws-lambda-go v1.21.0
