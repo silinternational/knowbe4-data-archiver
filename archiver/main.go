@@ -568,7 +568,6 @@ func manualRun() {
 func main() {
 	lambda.Start(handler)
 	// manualRun()
-
 }
 
 // marshalJsonLines is a partial implementation of JSON Lines

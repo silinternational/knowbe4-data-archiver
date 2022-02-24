@@ -1,0 +1,7 @@
+*.aes
+aws.env
+codeship*.yml
+Dockerfile*
+docker-compose.yml
+Makefile
+README.md

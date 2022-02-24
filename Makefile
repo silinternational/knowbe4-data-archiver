@@ -5,10 +5,10 @@ debug: app
 	docker-compose exec app bash
 
 build:
-	docker-compose run app ./codeship/build.sh
+	docker-compose run --rm app ./codeship/build.sh
 
 test:
-	docker-compose run app ./codeship/test.sh
+	docker-compose run --rm app ./codeship/test.sh
 
 clean:
 	docker-compose kill

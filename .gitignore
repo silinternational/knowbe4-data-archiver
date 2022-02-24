@@ -1,5 +1,18 @@
-.idea/
-.serverless/
+# Serverless directories
+.serverless
+
+# golang output binary directory
+bin
+
+# local creds and stuff
+aws.credentials
+aws.env
 *.aes
-*.env
-bin/
+local.env
+.env
+
+# dev tools metadata
+.idea/
+
+# Terraform
+.terraform/

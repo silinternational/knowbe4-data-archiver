@@ -1,19 +1,17 @@
-FROM golang:1.14.13
+FROM golang:1.17
 
 # Install packages
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y git nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+RUN apt-get install -y nodejs
 
 RUN alias ll="ls -al"
 
 # Copy in source and install deps
 RUN mkdir -p /app
-
-COPY ./ /app/
 WORKDIR /app
 
-RUN npm install -g serverless && npm install
+RUN npm --no-fund install -g serverless@3
 
-WORKDIR /app
+COPY ./ .
 
 RUN go get ./...
