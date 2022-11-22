@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -119,8 +120,9 @@ func callAPI(urlPath string, config LambdaConfig, queryParams map[string]string)
 	if err != nil {
 		return nil, fmt.Errorf("error making http request: %s", err)
 	} else if resp.StatusCode >= 300 {
+		resBody, _ := io.ReadAll(resp.Body)
 		err := fmt.Errorf("API returned an error. URL: %s, Code: %v, Status: %s Body: %s",
-			url, resp.StatusCode, resp.Status, resp.Body)
+			url, resp.StatusCode, resp.Status, resBody)
 		return nil, err
 	}
 
